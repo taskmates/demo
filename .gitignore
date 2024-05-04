@@ -1,0 +1,4 @@
+__pycache__/
+test.db
+sql_app.db
+sql_app.db test.db
