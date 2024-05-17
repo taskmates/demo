@@ -5,6 +5,6 @@ If you're running from docker, install the project dependencies inside the conta
 !poetry install | tail
 ```
 
-[//]: # (get the ticket details, then ask @demo_dev to implement it)
+[//]: # (Get the ticket details, then ask @demo_dev to implement it)
 
 Hey @jira, what do we have for today?
