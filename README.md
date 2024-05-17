@@ -70,6 +70,10 @@ Optionaly, ask the taskmate to use the default `%%writefile`
 
 ## Play around with it
 
+To start the AI completion process, press `control + meta + T`. If needed, press `Esc` at any time to interrupt the taskmate's response.
+
+For more help, ask @help or @taskmates for assistance.
+
 1. Semi-automated coding: [coding.md](coding.md)
 2. Jupyter environment: [jupyter-environment.md](Features%2F10.%20Jupyter%20environment%2Fjupyter-environment.md)
 
