@@ -31,18 +31,17 @@ docker run -it --rm --name taskmates -e JIRA_API_KEY -e JIRA_PROJECT -e JIRA_SER
 
 ## enterprise-gateway (via docker)
 
-Please note that this is currently a 3GB+ image.
-
-Optionally, run it locally (next section).
+Start the server
 
 ```shell
 docker pull ghcr.io/taskmates/enterprise-gateway:main
 
-docker run -it --rm --name enterprise_gateway -p 10100:10100 -v /var/demos/taskmates-demo:/var/demos/taskmates-demo -v /var/demos/taskmates-demo:/private/var/demos/taskmates-demo ghcr.io/taskmates/enterprise-gateway:main
+docker run -it --name enterprise_gateway -p 10100:10100 -v /var/demos/taskmates-demo:/var/demos/taskmates-demo -v /var/demos/taskmates-demo:/private/var/demos/taskmates-demo ghcr.io/taskmates/enterprise-gateway:main
 ```
 
-
 ## enterprise-gateway (locally)
+
+You can run it locally, but you will not have the file_editing_magics extension (until I publish them as a proper package).
 
 ```shell
 # install using pip from pypi
