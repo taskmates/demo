@@ -5,4 +5,4 @@ participants:
 
 ---
 
-@pydev what's new on react 20?
+@python_dev what's new on react 20?

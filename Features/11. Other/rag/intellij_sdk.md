@@ -1,2 +1,1 @@
-Hey @intellij_sdk how to write an action?
-
+Hey @intellij_sdk, how do I create an action?

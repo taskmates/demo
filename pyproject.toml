@@ -8,14 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 pytest = "^8.2.0"
-ipytest = "^0.14.2"
-jupyter = "^1.0.0"
-jupyter-enterprise-gateway = "^3.2.3"
-matplotlib = "^3.8.4"
-yfinance = "^0.2.38"
 fastapi = "^0.111.0"
 sqlalchemy = "^2.0.30"
-taskmates = { path = "/Users/ralphus/Development/ai/taskmates" }
 
 
 [build-system]

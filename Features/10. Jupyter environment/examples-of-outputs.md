@@ -1,4 +1,4 @@
-### Outputs
+### Examples of Outputs
 
 Let's run some code snippets and see the output.
 

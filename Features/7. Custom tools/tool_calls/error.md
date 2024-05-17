@@ -1,4 +1,13 @@
-# tool
+---
+tools:
+  run_shell_command:
+---
 
-hello
+Run cmd abc
+
+**assistant** 
+
+###### Steps
+
+- Run Shell Command [1] `{"cmd":"abc"}`
 
