@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      TASKMATES_PATH: ${{ runner.temp }}/.taskmates
+      TASKMATES_PATH: ${{ env.RUNNER_TEMP }}/.taskmates
       GH_TOKEN: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GITHUB_EVENT: ${{ toJson(github.event) }}
-      MARKDOWN_CHAT_PATH: ${{ runner.temp }}/request.md
+      MARKDOWN_CHAT_PATH: ${{ env.RUNNER_TEMP }}/request.md
 
     steps:
       - name: Install Taskmates
@@ -31,7 +31,7 @@ jobs:
 
       - name: Export GitHub Event
         run: |
-          echo "$GITHUB_EVENT" > "${{ runner.temp }}/issue_comment.json"
+          echo "$GITHUB_EVENT" > "${{ env.RUNNER_TEMP }}/issue_comment.json"
 
       - name: Checkout the project
         uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
               --template-params="{ \"event\": $GITHUB_EVENT  }"  \
-              --format full | tee "${{ runner.temp }}/response.md"
+              --format full | tee "${{ env.RUNNER_TEMP }}/response.md"
 
       - name: Summarize Response
         if: steps.run_taskmates.outcome == 'success'
@@ -97,16 +97,16 @@ jobs:
           post: |
             echo Summarizing the response...
 
-            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ runner.temp }}/summarize.md"
-            cat "${{ runner.temp }}/response.md" | taskmates-complete \
+            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ env.RUNNER_TEMP }}/summarize.md"
+            cat "${{ env.RUNNER_TEMP }}/response.md" | taskmates-complete \
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
                 --format text \
-                "Hey @progress please report this" | tee -a "${{ runner.temp }}/summarize.md"
+                "Hey @progress please report this" | tee -a "${{ env.RUNNER_TEMP }}/summarize.md"
             
             echo
             echo Reporting back...
-            cat "${{ runner.temp }}/summarize.md" | gh issue comment ${{ github.event.issue.number }} --body-file -
+            cat "${{ env.RUNNER_TEMP }}/summarize.md" | gh issue comment ${{ github.event.issue.number }} --body-file -
             
             echo
             echo "Taskmates run completed: $?"
