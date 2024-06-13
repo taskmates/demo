@@ -26,6 +26,12 @@ jobs:
         with:
           path: source
 
+      - name: Setup Python, Poetry and Dependencies
+        uses: packetcoders/action-setup-cache-python-poetry@main
+        with:
+          python-version: 3.11
+          poetry-version: 1.7.1
+
       - name: Install development tools (fd and ack)
         run: |
           sudo apt update && sudo apt install -y fd-find ack-grep
