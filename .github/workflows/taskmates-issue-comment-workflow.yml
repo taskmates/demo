@@ -15,34 +15,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      TASKMATES_PATH: ${{ env.RUNNER_TEMP }}/.taskmates
       GH_TOKEN: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GITHUB_EVENT: ${{ toJson(github.event) }}
-      MARKDOWN_CHAT_PATH: ${{ env.RUNNER_TEMP }}/request.md
 
     steps:
+      - name: Checkout the project
+        uses: actions/checkout@v4
+        with:
+          path: source
+
       - name: Install Taskmates
         uses: taskmates/install-taskmates@main
         with:
           version: main
           github_token: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
 
-      - name: Export GitHub Event
-        run: |
-          echo "$GITHUB_EVENT" > "${{ env.RUNNER_TEMP }}/issue_comment.json"
-
-      - name: Checkout the project
-        uses: actions/checkout@v4
-
-      - name: "Setup Python, Poetry and Dependencies"
-        uses: packetcoders/action-setup-cache-python-poetry@main
-        with:
-          python-version: 3.11
-          poetry-version: 1.7.1
-
       - name: Compose Chat
+        env:
+          MARKDOWN_CHAT_PATH: ${{ runner.temp }}/request.md
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
           ISSUE_DETAILS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER)
@@ -60,6 +52,9 @@ jobs:
 
       - name: Parse Chat
         id: parse_chat
+        env:
+          TASKMATES_PATH: ${{ runner.temp }}/.taskmates
+          MARKDOWN_CHAT_PATH: ${{ runner.temp }}/request.md
         run: |
           RECIPIENT=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient")
           echo "recipient=$RECIPIENT" >> $GITHUB_OUTPUT
@@ -76,8 +71,12 @@ jobs:
       - name: Run Taskmates
         id: run_taskmates
         if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
+        env:
+          TASKMATES_PATH: ${{ runner.temp }}/.taskmates
+          MARKDOWN_CHAT_PATH: ${{ runner.temp }}/request.md
         run: |
           set -Eeuo pipefail 
+          cd source
           
           # set up git so that taskmates can use it
           git config user.name '${{ github.event.comment.user.login }}'
@@ -88,25 +87,28 @@ jobs:
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
               --template-params="{ \"event\": $GITHUB_EVENT  }"  \
-              --format full | tee "${{ env.RUNNER_TEMP }}/response.md"
+              --format full | tee "${{ runner.temp }}/response.md"
 
       - name: Summarize Response
         if: steps.run_taskmates.outcome == 'success'
         uses: gacts/run-and-post-run@v1.4.0
+        env:
+          TASKMATES_PATH: ${{ runner.temp }}/.taskmates
         with:
+          working-directory: source
           post: |
             echo Summarizing the response...
 
-            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ env.RUNNER_TEMP }}/summarize.md"
-            cat "${{ env.RUNNER_TEMP }}/response.md" | taskmates-complete \
+            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ runner.temp }}/summarize.md"
+            cat "${{ runner.temp }}/response.md" | taskmates-complete \
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
                 --format text \
-                "Hey @progress please report this" | tee -a "${{ env.RUNNER_TEMP }}/summarize.md"
+                "Hey @progress please report this" | tee -a "${{ runner.temp }}/summarize.md"
             
             echo
             echo Reporting back...
-            cat "${{ env.RUNNER_TEMP }}/summarize.md" | gh issue comment ${{ github.event.issue.number }} --body-file -
+            cat "${{ runner.temp }}/summarize.md" | gh issue comment ${{ github.event.issue.number }} --body-file -
             
             echo
             echo "Taskmates run completed: $?"
