@@ -1,0 +1,116 @@
+name: Taskmates Issue Comment Workflow
+
+on:
+  issue_comment:
+    types: [ created ]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  build:
+    if: "!startsWith(github.event.comment.body, '**')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TASKMATES_PATH: ${{ github.workspace }}/.taskmates
+      GH_TOKEN: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GITHUB_EVENT: ${{ toJson(github.event) }}
+      MARKDOWN_CHAT_PATH: ${{ github.workspace }}/request.md
+
+    steps:
+      - name: Checkout the project
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: "Setup Python, Poetry and Dependencies"
+        uses: packetcoders/action-setup-cache-python-poetry@main
+        with:
+          python-version: 3.11
+          poetry-version: 1.7.1
+
+      - name: Install Taskmates
+        uses: taskmates/install-taskmates@main
+        with:
+          version: main
+          github_token: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
+
+      - name: Export GitHub Event
+        run: |
+          echo "$GITHUB_EVENT" > "${{ github.workspace }}/issue_comment.json"
+
+      - name: Compose Chat
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ISSUE_DETAILS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER)
+          ISSUE_TITLE=$(echo "$ISSUE_DETAILS" | jq -r '.title')
+          ISSUE_BODY=$(echo "$ISSUE_DETAILS" | jq -r '.body')
+          ISSUE_COMMENTS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments | jq -r 'map(if .body | startswith("**") then .body else "**\(.user.login)** " + .body end) | join("\n")')
+          
+          
+          echo "**github** $ISSUE_TITLE #$ISSUE_NUMBER" >> "$MARKDOWN_CHAT_PATH"
+          echo "" >> "$MARKDOWN_CHAT_PATH"
+          echo "$ISSUE_BODY" >> "$MARKDOWN_CHAT_PATH"
+          echo "" >> "$MARKDOWN_CHAT_PATH"
+          echo "$ISSUE_COMMENTS" >> "$MARKDOWN_CHAT_PATH"
+          cat "$MARKDOWN_CHAT_PATH"
+
+      - name: Parse Chat
+        id: parse_chat
+        run: |
+          RECIPIENT=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient")
+          echo "recipient=$RECIPIENT" >> $GITHUB_OUTPUT
+          echo "recipient=$RECIPIENT"
+          RECIPIENT_ROLE=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient_role")
+          echo "recipient_role=$RECIPIENT_ROLE" >> $GITHUB_OUTPUT
+          echo "recipient_role=$RECIPIENT_ROLE"
+
+      - name: Debug parsed chat
+        run: |
+          echo recipient_role = ${{ steps.parse_chat.outputs.recipient_role }}
+          echo login = ${{ github.event.comment.user.login }}
+
+      - name: Run Taskmates
+        id: run_taskmates
+        if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
+        run: |
+          set -Eeuo pipefail 
+          cd source
+          
+          # set up git so that taskmates can use it
+          git config user.name '${{ github.event.comment.user.login }}'
+          git config user.email '${{ github.event.comment.user.login }}@users.noreply.github.com'
+          
+          echo Fulfilling the request...
+          cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
+              --max-interactions=20 \
+              --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+              --template-params="{ \"event\": $GITHUB_EVENT  }"  \
+              --format full | tee "${{ github.workspace }}/response.md"
+
+      - name: Summarize Response
+        if: steps.run_taskmates.outcome == 'success'
+        uses: gacts/run-and-post-run@v1.4.0
+        with:
+          working-directory: source
+          post: |
+            echo Summarizing the response...
+
+            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ github.workspace }}/summarize.md"
+            cat "${{ github.workspace }}/response.md" | taskmates-complete \
+                --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+                --template-params="{ \"event\": $GITHUB_EVENT  }"  \
+                --format text \
+                "Hey @progress please report this" | tee -a "${{ github.workspace }}/summarize.md"
+            
+            echo
+            echo Reporting back...
+            cat "${{ github.workspace }}/summarize.md" | gh issue comment ${{ github.event.issue.number }} --body-file -
+            
+            echo
+            echo "Taskmates run completed: $?"
