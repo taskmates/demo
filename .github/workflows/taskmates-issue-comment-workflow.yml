@@ -23,15 +23,6 @@ jobs:
       MARKDOWN_CHAT_PATH: ${{ github.workspace }}/request.md
 
     steps:
-      - name: Checkout the project
-        uses: actions/checkout@v4
-
-      - name: "Setup Python, Poetry and Dependencies"
-        uses: packetcoders/action-setup-cache-python-poetry@main
-        with:
-          python-version: 3.11
-          poetry-version: 1.7.1
-
       - name: Install Taskmates
         uses: taskmates/install-taskmates@main
         with:
@@ -41,6 +32,15 @@ jobs:
       - name: Export GitHub Event
         run: |
           echo "$GITHUB_EVENT" > "${{ github.workspace }}/issue_comment.json"
+
+      - name: Checkout the project
+        uses: actions/checkout@v4
+
+      - name: "Setup Python, Poetry and Dependencies"
+        uses: packetcoders/action-setup-cache-python-poetry@main
+        with:
+          python-version: 3.11
+          poetry-version: 1.7.1
 
       - name: Compose Chat
         run: |
