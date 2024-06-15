@@ -99,6 +99,7 @@ jobs:
           echo Fulfilling the request...
           
           echo "$MARKDOWN_CHAT_PATH"
+          cat "$MARKDOWN_CHAT_PATH"
           
           echo
           
