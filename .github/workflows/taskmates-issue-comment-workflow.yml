@@ -107,7 +107,9 @@ jobs:
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
               --template-params="{ \"event\": $GITHUB_EVENT  }"  \
-              --format full | tee "$MARKDOWN_CHAT_PATH"
+              --format full | tee "$RUNNER_TEMP/response.md"
+
+          cp "$RUNNER_TEMP/response.md" "$MARKDOWN_CHAT_PATH"
 
       - name: Create PR
         run: |
