@@ -98,11 +98,6 @@ jobs:
           
           echo Fulfilling the request...
           
-          echo "$MARKDOWN_CHAT_PATH"
-          cat "$MARKDOWN_CHAT_PATH"
-          
-          echo
-          
           cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
