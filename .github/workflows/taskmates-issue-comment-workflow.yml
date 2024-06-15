@@ -102,8 +102,15 @@ jobs:
               --template-params="{ \"event\": $GITHUB_EVENT  }"  \
               --format full | tee "$MARKDOWN_CHAT_PATH"
 
+      - name: Create PR
+        run: |
+          set -Eeuo pipefail 
+          
+          echo Creating PR...
+          cat "$MARKDOWN_CHAT_PATH" | taskmates-complete "@guard the conversation involved modifying source code, now we need a PR " | tee "${{ runner.temp }}/guard-pr.md" \ 
+            && taskmates-complete --format full "Hey @gh please create a feature branch, commit the modified files, and open a PR" | tee "$MARKDOWN_CHAT_PATH"
+
       - name: Summarize Response
-        if: steps.run_taskmates.outcome == 'success'
         uses: gacts/run-and-post-run@v1.4.0
         with:
           post: |
@@ -114,7 +121,7 @@ jobs:
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
                 --format text \
-                "Hey @progress please report this" | tee -a "${{ runner.temp }}/report.md"
+                "Hey @progress please report this" | tee "${{ runner.temp }}/report.md"
             
             echo
             echo Reporting back...
