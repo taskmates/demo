@@ -128,7 +128,7 @@ jobs:
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
                 --format text \
-                "Hey @progress please report this" | tee "${{ runner.temp }}/report.md"
+                "Hey @progress please report this" | tee -a "${{ runner.temp }}/report.md"
             
             echo
             echo Reporting back...
