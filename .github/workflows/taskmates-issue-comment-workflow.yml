@@ -23,8 +23,6 @@ jobs:
     steps:
       - name: Checkout the project
         uses: actions/checkout@v4
-        with:
-          path: source
 
       - name: Setup Python, Poetry and Dependencies
         uses: packetcoders/action-setup-cache-python-poetry@main
@@ -38,8 +36,18 @@ jobs:
           version: main
           github_token: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
 
+      - name: Set up Taskmates
+        run: |
+          export TASKMATES_HOME=${{ runner.temp }}/.taskmates
+          echo TASKMATES_HOME=$TASKMATES_HOME >> $GITHUB_ENV
+          
+          git clone https://${{ inputs.github_token }}@github.com/taskmates/taskmates-directory.git "$TASKMATES_HOME/taskmates"
+
       - name: Compose Chat
         run: |
+          export MARKDOWN_CHAT_PATH=${{ runner.temp }}/chat.md
+          echo MARKDOWN_CHAT_PATH=$MARKDOWN_CHAT_PATH >> $GITHUB_ENV
+          
           ISSUE_NUMBER=${{ github.event.issue.number }}
           ISSUE_DETAILS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER)
           ISSUE_TITLE=$(echo "$ISSUE_DETAILS" | jq -r '.title')
@@ -72,22 +80,18 @@ jobs:
         run: |
           echo recipient_role = ${{ steps.parse_chat.outputs.recipient_role }}
           echo login = ${{ github.event.comment.user.login }}
-          
+
 
       - name: Set up taskmates environment
-        working-directory: source
         run: |
           # set up git so that taskmates can use it
           git config user.name '${{ github.event.comment.user.login }}'
           git config user.email '${{ github.event.comment.user.login }}@users.noreply.github.com'
-      
+
 
       - name: Run Taskmates
         id: run_taskmates
         if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
-        working-directory: source
-        env:
-          TASKMATES_PATH: ${{ runner.temp }}/.taskmates
         run: |
           set -Eeuo pipefail 
           
@@ -101,10 +105,7 @@ jobs:
       - name: Summarize Response
         if: steps.run_taskmates.outcome == 'success'
         uses: gacts/run-and-post-run@v1.4.0
-        env:
-          TASKMATES_PATH: ${{ runner.temp }}/.taskmates
         with:
-          working-directory: source
           post: |
             echo Summarizing the response...
 
