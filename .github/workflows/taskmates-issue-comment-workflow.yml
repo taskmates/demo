@@ -126,7 +126,7 @@ jobs:
           post: |
             echo Summarizing the response...
 
-            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ runner.temp }}/summarize.md"
+            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ runner.temp }}/report.md"
             cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
