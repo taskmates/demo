@@ -32,11 +32,6 @@ jobs:
           python-version: 3.11
           poetry-version: 1.7.1
 
-      - name: Install development tools (fd and ack)
-        run: |
-          sudo apt update && sudo apt install -y fd-find ack-grep
-          sudo ln -s /usr/bin/fdfind /usr/local/bin/fd
-
       - name: Install Taskmates
         uses: taskmates/install-taskmates@main
         with:
