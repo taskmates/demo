@@ -93,9 +93,15 @@ jobs:
         id: run_taskmates
         if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
         run: |
-          set -Eeuo pipefail 
+          set -Eeuo pipefail
+          
           
           echo Fulfilling the request...
+          
+          echo "$MARKDOWN_CHAT_PATH"
+          
+          echo
+          
           cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
