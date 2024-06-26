@@ -52,10 +52,10 @@ jobs:
           ISSUE_DETAILS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER)
           ISSUE_TITLE=$(echo "$ISSUE_DETAILS" | jq -r '.title')
           ISSUE_BODY=$(echo "$ISSUE_DETAILS" | jq -r '.body')
-          ISSUE_COMMENTS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments | jq -r 'map(if .body | startswith("**") then .body else "**\(.user.login)** " + .body end) | join("\n")')
+          ISSUE_COMMENTS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments | jq -r 'map(if .body | startswith("**") then .body else "**\(.user.login)>** " + .body end) | join("\n")')
           
           cat <<EOF >> "$MARKDOWN_CHAT_PATH"
-          **github** $ISSUE_TITLE #$ISSUE_NUMBER
+          **github>** $ISSUE_TITLE #$ISSUE_NUMBER
           
           $ISSUE_BODY
           
@@ -123,7 +123,7 @@ jobs:
           post: |
             echo Summarizing the response...
 
-            echo -n "**${{steps.parse_chat.outputs.recipient}}** " > "${{ runner.temp }}/report.md"
+            echo -n "**${{steps.parse_chat.outputs.recipient}}>** " > "${{ runner.temp }}/report.md"
             cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
