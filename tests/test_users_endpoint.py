@@ -12,3 +12,13 @@ def test_get_user(db, client):
     response = client.get(f"/users/{user.id}")
     assert response.status_code == 200
     assert response.json() == {"id": user.id, "name": user.name, "email_domain": "example.com"}
+
+def test_get_user_no_email(db, client):
+    # Create test data for a user without an email
+    user_no_email = User(name="Bob")
+    db.add(user_no_email)
+    db.commit()
+
+    response = client.get(f"/users/{user_no_email.id}")
+    assert response.status_code == 200
+    assert response.json() == {"id": user_no_email.id, "name": user_no_email.name, "email_domain": None}
