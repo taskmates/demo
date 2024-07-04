@@ -98,7 +98,7 @@ jobs:
           
           echo Fulfilling the request...
           
-          cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
+          cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
               --max-interactions=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
               --template-params="{ \"event\": $GITHUB_EVENT  }"  \
@@ -110,9 +110,9 @@ jobs:
         run: |
           set -Eeuo pipefail 
 
-          taskmates-complete --model claude-3-haiku-20240307 --format completion "@guard report true if source code has been modified" <"$MARKDOWN_CHAT_PATH" |
+          taskmates complete --model claude-3-haiku-20240307 --format completion "@guard report true if source code has been modified" <"$MARKDOWN_CHAT_PATH" |
           tee "$RUNNER_TEMP/guard-pr.md" &&
-          taskmates-complete --format full "Hey @gh please create a feature branch, commit the modified files, and open a PR" <"$MARKDOWN_CHAT_PATH" |
+          taskmates complete --format full "Hey @gh please create a feature branch, commit the modified files, and open a PR" <"$MARKDOWN_CHAT_PATH" |
           tee "$RUNNER_TEMP/create-pr.md"
           
           cp "$RUNNER_TEMP/create-pr.md" "$MARKDOWN_CHAT_PATH"
@@ -124,7 +124,7 @@ jobs:
             echo Summarizing the response...
 
             echo -n "**${{steps.parse_chat.outputs.recipient}}>** " > "${{ runner.temp }}/report.md"
-            cat "$MARKDOWN_CHAT_PATH" | taskmates-complete \
+            cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
                 --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
                 --template-params="{ \"event\": $GITHUB_EVENT  }"  \
                 --format text \
