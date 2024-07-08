@@ -55,7 +55,13 @@ jobs:
           ISSUE_COMMENTS=$(gh api /repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments | jq -r 'map(if .body | startswith("**") then .body else "**\(.user.login)>** " + .body end) | join("\n")')
           
           cat <<EOF >> "$MARKDOWN_CHAT_PATH"
-          **github>** $ISSUE_TITLE #$ISSUE_NUMBER
+          **github>** 
+          
+          Please handle the request on the Issue below. 
+          
+          The source code of this repo is already checked out and available in the current working directory.
+          
+          Issue: $ISSUE_TITLE #$ISSUE_NUMBER
           
           $ISSUE_BODY
           
