@@ -1,0 +1,151 @@
+name: Taskmates PR Comment Workflow
+
+on:
+  pull_request_review_comment:
+    types: [ created ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    if: "!startsWith(github.event.comment.body, '**')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GITHUB_EVENT: ${{ toJson(github.event) }}
+
+    steps:
+      - name: Checkout the PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Python, Poetry and Dependencies
+        uses: packetcoders/action-setup-cache-python-poetry@main
+        with:
+          python-version: 3.11
+          poetry-version: 1.7.1
+
+      - name: Install Taskmates
+        uses: taskmates/install-taskmates@main
+        with:
+          version: main
+          github_token: ${{ secrets.TASKMATES_GITHUB_TOKEN }}
+
+      - name: Set up Taskmates
+        run: |
+          export TASKMATES_HOME=${{ runner.temp }}/.taskmates
+          echo TASKMATES_HOME=$TASKMATES_HOME >> $GITHUB_ENV
+          
+          git clone https://${{ inputs.github_token }}@github.com/taskmates/taskmates-directory.git "$TASKMATES_HOME/taskmates"
+
+      - name: Compose Chat
+        run: |
+          export MARKDOWN_CHAT_PATH=${{ runner.temp }}/chat.md
+          echo MARKDOWN_CHAT_PATH=$MARKDOWN_CHAT_PATH >> $GITHUB_ENV
+          
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_DETAILS=$(gh api /repos/${{ github.repository }}/pulls/$PR_NUMBER)
+          PR_TITLE=$(echo "$PR_DETAILS" | jq -r '.title')
+          PR_BODY=$(echo "$PR_DETAILS" | jq -r '.body')
+          PR_COMMENTS=$(gh api /repos/${{ github.repository }}/pulls/$PR_NUMBER/comments | jq -r 'map(if .body | startswith("**") then .body else "**\(.user.login)>** " + .body end) | join("\n")')
+          
+          cat <<EOF >> "$MARKDOWN_CHAT_PATH"
+          **github>** 
+          
+          Please handle the request on the Pull Request below. 
+          
+          The source code of this branch is already checked out and available in the current working directory.
+          
+          Pull Request: $PR_TITLE #$PR_NUMBER
+          
+          $PR_BODY
+          
+          ---
+          
+          $PR_COMMENTS
+          EOF
+          
+          cat "$MARKDOWN_CHAT_PATH"
+
+      - name: Fetch PR Changes
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_DIFF=$(gh api /repos/${{ github.repository }}/pulls/$PR_NUMBER --jq '.diff_url' | xargs curl -s)
+          echo "$PR_DIFF" > "${{ runner.temp }}/pr_diff.patch"
+          echo "PR_DIFF_PATH=${{ runner.temp }}/pr_diff.patch" >> $GITHUB_ENV
+
+      - name: Parse Chat
+        id: parse_chat
+        run: |
+          RECIPIENT=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient")
+          RECIPIENT_ROLE=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient_role")
+
+          echo "recipient=$RECIPIENT" >> $GITHUB_OUTPUT
+          echo "recipient_role=$RECIPIENT_ROLE" >> $GITHUB_OUTPUT
+          
+          echo "recipient=$RECIPIENT"
+          echo "recipient_role=$RECIPIENT_ROLE"
+
+      - name: Debug parsed chat
+        run: |
+          echo recipient_role = ${{ steps.parse_chat.outputs.recipient_role }}
+          echo login = ${{ github.event.comment.user.login }}
+
+      - name: Set up taskmates environment
+        run: |
+          git config user.name '${{ github.event.comment.user.login }}'
+          git config user.email '${{ github.event.comment.user.login }}@users.noreply.github.com'
+
+      - name: Run Taskmates
+        id: run_taskmates
+        if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
+        run: |
+          set -Eeuo pipefail
+          
+          echo Fulfilling the request...
+          
+          cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
+              --max-interactions=20 \
+              --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+              --template-params="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
+              --format full | tee "$RUNNER_TEMP/response.md"
+
+          cp "$RUNNER_TEMP/response.md" "$MARKDOWN_CHAT_PATH"
+
+      - name: Create PR
+        run: |
+          set -Eeuo pipefail 
+
+          taskmates complete --model claude-3-haiku-20240307 --format completion "@guard report true if source code has been modified" <"$MARKDOWN_CHAT_PATH" |
+          tee "$RUNNER_TEMP/guard-pr.md" &&
+          taskmates complete --format full "Hey @gh please create a feature branch, commit the modified files, and open a PR" <"$MARKDOWN_CHAT_PATH" |
+          tee "$RUNNER_TEMP/create-pr.md"
+          
+          cp "$RUNNER_TEMP/create-pr.md" "$MARKDOWN_CHAT_PATH"
+
+      - name: Summarize Response
+        uses: gacts/run-and-post-run@v1.4.0
+        with:
+          post: |
+            echo Summarizing the response...
+
+            echo -n "**${{steps.parse_chat.outputs.recipient}}>** " > "${{ runner.temp }}/report.md"
+            cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
+                --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+                --template-params="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
+                --format text \
+                "Hey @progress please report this" | tee -a "${{ runner.temp }}/report.md"
+            
+            echo
+            echo Reporting back...
+            cat "${{ runner.temp }}/report.md" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+            
+            echo
+            echo "Taskmates run completed: $?"
