@@ -23,6 +23,8 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    email_domain = user.email.split("@")[1]
-
-    return {"id": user.id, "name": user.name, "email_domain": email_domain}
+    if user.email:
+        email_domain = user.email.split("@")[1]
+        return {"id": user.id, "name": user.name, "email_domain": email_domain}
+    else:
+        return {"id": user.id, "name": user.name}
