@@ -123,7 +123,7 @@ jobs:
           echo Fulfilling the request...
 
           cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
-              --max-interactions=20 \
+              --max-steps=20 \
               --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
               --template-params="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
               --format full | tee "$RUNNER_TEMP/response.md"
