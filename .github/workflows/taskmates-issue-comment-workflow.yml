@@ -72,6 +72,7 @@ jobs:
       - name: Parse Chat
         id: parse_chat
         run: |
+          export TASKMATES_HOME=${{ runner.temp }}/.taskmates
           RECIPIENT=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient")
           RECIPIENT_ROLE=$(taskmates parse < "$MARKDOWN_CHAT_PATH" | jq -r ".messages[-1].recipient_role")
 
@@ -98,6 +99,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           
+          export TASKMATES_HOME=${{ runner.temp }}/.taskmates
+          
           echo Fulfilling the request...
           
           cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
@@ -111,7 +114,9 @@ jobs:
       - name: Create PR
         if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
         run: |
-          set -Eeuo pipefail 
+          set -Eeuo pipefail
+          
+          export TASKMATES_HOME=${{ runner.temp }}/.taskmates
 
           taskmates complete --model claude-3-haiku-20240307 --format completion "@guard report true if source code has been modified" <"$MARKDOWN_CHAT_PATH" |
           tee "$RUNNER_TEMP/guard-pr.md" &&
