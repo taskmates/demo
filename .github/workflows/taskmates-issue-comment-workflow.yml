@@ -66,8 +66,14 @@ jobs:
           
           $ISSUE_COMMENTS
           EOF
-          
-          cat "$MARKDOWN_CHAT_PATH"
+
+
+      - name: Upload request
+        uses: actions/upload-artifact@v4
+        with:
+          name: request.md
+          path: |
+            ${{ runner.temp }}/chat.md
 
       - name: Parse Chat
         id: parse_chat
@@ -110,6 +116,15 @@ jobs:
               --format full | tee "$RUNNER_TEMP/response.md"
 
           cp "$RUNNER_TEMP/response.md" "$MARKDOWN_CHAT_PATH"
+
+      - name: Upload response
+        if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
+        uses: actions/upload-artifact@v4
+        with:
+          name: response.md
+          path: |
+            ${{ runner.temp }}/response.md
+          compression-level: 0
 
       - name: Create PR
         if: steps.parse_chat.outputs.recipient_role == 'assistant' && github.event.comment.user.login == 'srizzo'
