@@ -12,3 +12,11 @@ def test_get_user(db, client):
     response = client.get(f"/users/{user.id}")
     assert response.status_code == 200
     assert response.json() == {"id": user.id, "name": user.name, "email_domain": "example.com"}
+
+def test_get_user_no_email(db, client):
+    user = User(name="Bob", email=None)
+    db.add(user)
+    db.commit()
+
+    response = client.get(f"/users/{user.id}")
+    assert response.status_code != 500
