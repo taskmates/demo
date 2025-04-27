@@ -123,8 +123,8 @@ jobs:
 
           cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
               --max-steps=20 \
-              --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
-              --template-params="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
+              --inputs='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+              --inputs="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
               --format full | tee "$RUNNER_TEMP/response.md"
 
           cp "$RUNNER_TEMP/response.md" "$MARKDOWN_CHAT_PATH"
@@ -138,8 +138,8 @@ jobs:
 
             echo -n "**${{steps.parse_chat.outputs.recipient}}>** " > "${{ runner.temp }}/report.md"
             cat "$MARKDOWN_CHAT_PATH" | taskmates complete \
-                --template-params='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
-                --template-params="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
+                --inputs='{"repository": "${{ github.repository }}", "event_name": "${{ github.event_name }}"}' \
+                --inputs="{ \"event\": $GITHUB_EVENT, \"pr_diff_path\": \"$PR_DIFF_PATH\" }"  \
                 --format text \
                 "Hey @progress please report this" | tee -a "${{ runner.temp }}/report.md"
 
